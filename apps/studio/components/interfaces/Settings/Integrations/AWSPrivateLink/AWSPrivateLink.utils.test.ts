@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { getConnectionStatusUi, type PrivateLinkConnectionStatus } from './AWSPrivateLink.utils'
+import {
+  getConnectionsAttention,
+  getConnectionsAttentionCopy,
+  getConnectionStatusUi,
+  isIamRoleArn,
+  type PrivateLinkConnectionStatus,
+} from './AWSPrivateLink.utils'
 
 describe('getConnectionStatusUi', () => {
   it.each([
@@ -65,5 +71,45 @@ describe('getConnectionStatusUi', () => {
     expect(ui.badge).toBe('Unknown')
     expect(ui.badgeVariant).toBe('default')
     expect(ui.title).toBe("Couldn't determine this connection's status")
+  })
+})
+
+describe('isIamRoleArn', () => {
+  it('accepts a role ARN', () => {
+    expect(isIamRoleArn('arn:aws:iam::111122223333:role/TenantConnector')).toBe(true)
+  })
+
+  it('rejects empty and non-role ARNs', () => {
+    expect(isIamRoleArn('')).toBe(false)
+    expect(isIamRoleArn('111122223333')).toBe(false)
+    expect(isIamRoleArn('arn:aws:iam::111122223333:user/admin')).toBe(false)
+  })
+})
+
+describe('getConnectionsAttentionCopy', () => {
+  it('returns null when nothing needs attention', () => {
+    expect(getConnectionsAttentionCopy({ waitingCount: 0, expiredCount: 0 })).toBeNull()
+  })
+
+  it('warns when a connection is waiting', () => {
+    const copy = getConnectionsAttentionCopy({ waitingCount: 1, expiredCount: 0 })
+    expect(copy?.type).toBe('warning')
+    expect(copy?.title).toBe('Waiting for the AWS account owner')
+  })
+
+  it('uses destructive copy when only expired', () => {
+    const copy = getConnectionsAttentionCopy({ waitingCount: 0, expiredCount: 2 })
+    expect(copy?.type).toBe('destructive')
+    expect(copy?.title).toBe('Connection requests expired')
+  })
+
+  it('counts statuses from a list', () => {
+    expect(
+      getConnectionsAttention([
+        { status: 'READY' },
+        { status: 'ASSOCIATION_ACCEPTED' },
+        { status: 'ASSOCIATION_REQUEST_EXPIRED' },
+      ])
+    ).toEqual({ waitingCount: 1, expiredCount: 1 })
   })
 })

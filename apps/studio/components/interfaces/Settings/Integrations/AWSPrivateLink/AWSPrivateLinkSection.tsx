@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, CardContent, cn } from 'ui'
+import { Admonition } from 'ui-patterns/Admonition'
 import { ConfirmationModal } from 'ui-patterns/Dialogs/ConfirmationModal'
 import {
   PageSection,
@@ -12,8 +13,10 @@ import {
 } from 'ui-patterns/PageSection'
 
 import { IntegrationSectionIcon } from '../IntegrationsSettings'
+import { getConnectionsAttention, getConnectionsAttentionCopy } from './AWSPrivateLink.utils'
 import { AWSPrivateLinkAccountItem } from './AWSPrivateLinkAccountItem'
 import { AWSPrivateLinkForm } from './AWSPrivateLinkForm'
+import { usePrivateLinkPreview } from './preview'
 import { ResourceList } from '@/components/ui/Resource/ResourceList'
 import { UpgradeToPro } from '@/components/ui/UpgradeToPro'
 import { useAWSAccountDeleteMutation } from '@/data/aws-accounts/aws-account-delete-mutation'
@@ -26,7 +29,12 @@ import { IS_PLATFORM } from '@/lib/constants'
 
 export const AWSPrivateLinkSection = () => {
   const { data: project } = useSelectedProjectQuery()
-  const { data: accounts } = useAWSAccountsQuery({ projectRef: project?.ref })
+  const preview = usePrivateLinkPreview()
+  const { data: liveAccounts } = useAWSAccountsQuery(
+    { projectRef: project?.ref },
+    { enabled: !preview.enabled }
+  )
+  const accounts = preview.enabled ? preview.accounts : liveAccounts
 
   const [selectedAccount, setSelectedAccount] = useState<AWSAccount>()
   const [showForm, setShowForm] = useState(false)
@@ -41,7 +49,8 @@ export const AWSPrivateLinkSection = () => {
   })
 
   const { hasAccess: hasPrivateLinkAccess } = useCheckEntitlements('security.private_link')
-  const promptPlanUpgrade = IS_PLATFORM && !hasPrivateLinkAccess
+  const promptPlanUpgrade = IS_PLATFORM && !hasPrivateLinkAccess && !preview.skipUpgradeWall
+  const attentionCopy = getConnectionsAttentionCopy(getConnectionsAttention(accounts))
 
   const onAddAccount = () => {
     setSelectedAccount(undefined)
@@ -103,6 +112,15 @@ export const AWSPrivateLinkSection = () => {
                   Add connection
                 </Button>
               </div>
+              {attentionCopy && (
+                <div className="mb-3">
+                  <Admonition
+                    type={attentionCopy.type}
+                    title={attentionCopy.title}
+                    description={attentionCopy.description}
+                  />
+                </div>
+              )}
               {(accounts?.length ?? 0) > 0 ? (
                 <ResourceList>
                   {accounts?.map((account) => (

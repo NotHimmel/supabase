@@ -13,6 +13,7 @@ import {
 } from 'ui-patterns/PageSection'
 import { GenericSkeletonLoader } from 'ui-patterns/ShimmeringLoader'
 
+import { PrivateLinkPreviewVercelOverride, usePrivateLinkPreview } from '../AWSPrivateLink/preview'
 import { IntegrationSectionIcon } from '../IntegrationsSettings'
 import VercelIntegrationConnectionForm from './VercelIntegrationConnectionForm'
 import { IntegrationConnectionItem } from '@/components/interfaces/Integrations/VercelGithub/IntegrationConnection'
@@ -43,6 +44,7 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
   const { data: org } = useSelectedOrganizationQuery()
   const { data } = useOrgIntegrationsQuery({ orgSlug: org?.slug })
   const sidePanelsStateSnapshot = useSidePanelsStateSnapshot()
+  const preview = usePrivateLinkPreview()
   const isBranch = project?.parent_project_ref !== undefined
 
   const { can: canReadVercelConnection, isLoading: isLoadingPermissions } =
@@ -138,9 +140,17 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
     connections.length,
     'connection'
   )} `
-  const description = isProjectScoped
+  const liveDescription = isProjectScoped
     ? 'Connect Vercel projects to this Supabase project. Supabase keeps environment variables up to date in each connected Vercel project.'
     : 'Connect your Vercel teams to this Supabase organization. Supabase keeps environment variables up to date in each connected project. You can also link multiple Vercel projects to the same Supabase project.'
+  const showPreviewCard = preview.vercelCard !== 'live'
+
+  let description = liveDescription
+  if (preview.vercelCard === 'initiated' || preview.vercelCard === 'distinguish-billing') {
+    description = 'This project is linked from Vercel.'
+  } else if (preview.vercelCard === 'marketplace') {
+    description = 'Supabase keeps environment variables up to date. Billing stays on Vercel.'
+  }
 
   return (
     <PageSection>
@@ -154,11 +164,12 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
         </div>
       </PageSectionMeta>
       <PageSectionContent>
-        {isLoadingPermissions ? (
-          <GenericSkeletonLoader />
-        ) : !canReadVercelConnection ? (
+        {showPreviewCard && <PrivateLinkPreviewVercelOverride />}
+        {!showPreviewCard && isLoadingPermissions && <GenericSkeletonLoader />}
+        {!showPreviewCard && !isLoadingPermissions && !canReadVercelConnection && (
           <NoPermission resourceText="view this organization's Vercel connections" />
-        ) : (
+        )}
+        {!showPreviewCard && !isLoadingPermissions && canReadVercelConnection && (
           <div className="space-y-6">
             <div>
               {vercelIntegration ? (

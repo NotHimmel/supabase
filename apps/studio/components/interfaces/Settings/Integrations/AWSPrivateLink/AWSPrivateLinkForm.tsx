@@ -3,7 +3,6 @@ import { useFlag } from 'common'
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 import {
   Badge,
   Button,
@@ -29,7 +28,8 @@ import { Input as CopyableInput } from 'ui-patterns/DataInputs/Input'
 import { FormItemLayout } from 'ui-patterns/form/FormItemLayout/FormItemLayout'
 import { z } from 'zod'
 
-import { getConnectionStatusUi } from './AWSPrivateLink.utils'
+import { getConnectionStatusUi, isIamRoleArn } from './AWSPrivateLink.utils'
+import { replayPrivateLinkAddedToast, usePrivateLinkPreview } from './preview'
 import { InlineLink } from '@/components/ui/InlineLink'
 import { useAWSAccountCreateMutation } from '@/data/aws-accounts/aws-account-create-mutation'
 import type { AWSAccount } from '@/data/aws-accounts/aws-accounts-query'
@@ -47,6 +47,10 @@ const FormSchema = z.object({
     .regex(/^\d{12}$/, 'Enter a 12-digit AWS account ID'),
   databaseIdentifier: z.string().min(1, 'Select a database'),
   accountName: z.string(),
+  destinationIamRoleArn: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || isIamRoleArn(value), 'Enter an IAM role ARN'),
 })
 
 type FormValues = z.infer<typeof FormSchema>
@@ -69,6 +73,7 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
     { enabled: shouldLoadReadReplicas }
   )
   const { mutate: createAccount, isPending } = useAWSAccountCreateMutation()
+  const preview = usePrivateLinkPreview()
 
   const readReplicas = databases.filter((database) => database.identifier !== project?.ref)
   const showDatabaseTarget = showPrivateLinkReadReplica || !isNew
@@ -80,37 +85,46 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
       awsAccountId: '',
       databaseIdentifier: '',
       accountName: '',
+      destinationIamRoleArn: '',
     },
     values: {
-      awsAccountId: account?.aws_account_id ?? '',
+      awsAccountId: account?.aws_account_id ?? preview.prefillAwsAccountId ?? '',
       databaseIdentifier: account?.database_identifier ?? project?.ref ?? '',
       accountName: account?.account_name ?? '',
+      destinationIamRoleArn: account?.destination_iam_role_arn ?? '',
     },
     resetOptions: { keepDirtyValues: true },
   })
 
   const onSubmit = (values: FormValues) => {
     if (!project) return
-    if (isNew) {
-      createAccount(
-        {
-          projectRef: project.ref,
-          awsAccountId: values.awsAccountId,
-          accountName: values.accountName.trim() || undefined,
-          databaseIdentifier:
-            values.databaseIdentifier && values.databaseIdentifier !== project.ref
-              ? values.databaseIdentifier
-              : undefined,
-        },
-        {
-          onSuccess: () => {
-            form.reset()
-            toast.success('Connection added')
-            onOpenChange(false)
-          },
-        }
-      )
+    if (!isNew) return
+
+    if (preview.enabled) {
+      form.reset()
+      replayPrivateLinkAddedToast()
+      onOpenChange(false)
+      return
     }
+
+    createAccount(
+      {
+        projectRef: project.ref,
+        awsAccountId: values.awsAccountId,
+        accountName: values.accountName.trim() || undefined,
+        databaseIdentifier:
+          values.databaseIdentifier && values.databaseIdentifier !== project.ref
+            ? values.databaseIdentifier
+            : undefined,
+      },
+      {
+        onSuccess: () => {
+          form.reset()
+          replayPrivateLinkAddedToast()
+          onOpenChange(false)
+        },
+      }
+    )
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -246,6 +260,34 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                   </FormItemLayout>
                 )}
               />
+              {isNew && (
+                <FormField
+                  control={form.control}
+                  name="destinationIamRoleArn"
+                  render={({ field }) => (
+                    <FormItemLayout
+                      label="Destination IAM role ARN"
+                      labelOptional="Optional"
+                      description="Restricts the share to a single role. Leave empty to share with the whole AWS account."
+                    >
+                      <FormControl>
+                        <Input {...field} placeholder="arn:aws:iam::123456789012:role/Connector" />
+                      </FormControl>
+                    </FormItemLayout>
+                  )}
+                />
+              )}
+              {!isNew && account?.partner === 'vercel' && (
+                <p className="text-sm text-foreground-light">Connected via Vercel</p>
+              )}
+              {!isNew && account?.destination_iam_role_arn && (
+                <FormItemLayout
+                  label="Destination IAM role ARN"
+                  description="This share is restricted to this role."
+                >
+                  <CopyableInput readOnly copy value={account.destination_iam_role_arn} />
+                </FormItemLayout>
+              )}
               {!isNew && account?.resource_access_manager_resource_config_id && (
                 <FormItemLayout label="Resource configuration ID">
                   <CopyableInput
