@@ -43,5 +43,22 @@ export const ExplorerQueryTabCoordinator = () => {
     })
   }, [ref, tabs])
 
+  useEffect(() => {
+    if (!ref) return
+
+    const flushProjectDrafts = () => explorerQueryState.flushPendingPersistence({ projectRef: ref })
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushProjectDrafts()
+    }
+
+    window.addEventListener('pagehide', flushProjectDrafts)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', flushProjectDrafts)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [ref])
+
   return null
 }

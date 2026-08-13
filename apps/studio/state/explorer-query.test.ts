@@ -148,6 +148,23 @@ describe('explorer query drafts', () => {
     expect(JSON.parse(storage.getItem(key)!)['query-1'].sql).toBe('select 1')
   })
 
+  it('flushes pending SQL persistence before the debounce elapses', () => {
+    const storage = createMemoryStorage()
+    const state = createExplorerQueryState(storage)
+    const key = LOCAL_STORAGE_KEYS.EXPLORER_QUERY_DRAFTS('project-a')
+    state.createDraft({ id: 'query-1', projectRef: 'project-a' })
+    storage.setItem.mockClear()
+
+    state.updateDraft({ id: 'query-1', sql: 'select 1' })
+    state.flushPendingPersistence({ projectRef: 'project-a' })
+
+    expect(storage.setItem).toHaveBeenCalledOnce()
+    expect(JSON.parse(storage.getItem(key)!)['query-1'].sql).toBe('select 1')
+
+    vi.advanceTimersByTime(EXPLORER_QUERY_PERSIST_DELAY)
+    expect(storage.setItem).toHaveBeenCalledOnce()
+  })
+
   it('retains only the most recently updated persisted drafts', () => {
     const storage = createMemoryStorage()
     const state = createExplorerQueryState(storage)

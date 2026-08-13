@@ -40,9 +40,13 @@ export const QueryTab = () => {
     setRestoredQueryKey(`${ref}:${id}`)
   }, [id, ref, tabs])
 
-  if (queryKey && restoredQueryKey !== queryKey) {
+  if (!queryKey || restoredQueryKey !== queryKey) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-100">
+      <div
+        role="status"
+        aria-label="Loading query"
+        className="flex h-full items-center justify-center bg-surface-100"
+      >
         <Loader2 className="animate-spin text-foreground-muted" size={18} />
       </div>
     )

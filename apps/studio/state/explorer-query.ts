@@ -98,7 +98,10 @@ const writePersistedDrafts = (
 }
 
 export const createExplorerQueryState = (storage: StorageLike = safeLocalStorage) => {
-  const pendingPersistence = new Map<string, ReturnType<typeof setTimeout>>()
+  const pendingPersistence = new Map<
+    string,
+    { timeout: ReturnType<typeof setTimeout>; persist: () => void }
+  >()
 
   const state = proxy({
     drafts: {} as Record<string, ExplorerQueryDraft>,
@@ -174,6 +177,8 @@ export const createExplorerQueryState = (storage: StorageLike = safeLocalStorage
       draft.updatedAt = Date.now()
 
       const persist = () => {
+        const pending = pendingPersistence.get(id)
+        if (pending) clearTimeout(pending.timeout)
         pendingPersistence.delete(id)
         const currentDraft = state.drafts[id]
         if (!currentDraft) return
@@ -189,15 +194,25 @@ export const createExplorerQueryState = (storage: StorageLike = safeLocalStorage
       }
 
       const pending = pendingPersistence.get(id)
-      if (pending) clearTimeout(pending)
+      if (pending) clearTimeout(pending.timeout)
 
       if (name !== undefined || source !== undefined) persist()
-      else pendingPersistence.set(id, setTimeout(persist, EXPLORER_QUERY_PERSIST_DELAY))
+      else {
+        const timeout = setTimeout(persist, EXPLORER_QUERY_PERSIST_DELAY)
+        pendingPersistence.set(id, { timeout, persist })
+      }
+    },
+
+    flushPendingPersistence: ({ projectRef }: { projectRef?: string } = {}) => {
+      for (const [id, pending] of [...pendingPersistence]) {
+        if (projectRef !== undefined && state.drafts[id]?.projectRef !== projectRef) continue
+        pending.persist()
+      }
     },
 
     removeDraft: ({ id, projectRef }: { id: string; projectRef: string }) => {
       const pending = pendingPersistence.get(id)
-      if (pending) clearTimeout(pending)
+      if (pending) clearTimeout(pending.timeout)
       pendingPersistence.delete(id)
 
       if (state.drafts[id]?.projectRef === projectRef) {

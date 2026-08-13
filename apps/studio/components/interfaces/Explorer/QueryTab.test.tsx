@@ -1,9 +1,10 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse } from 'msw'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { QueryTab } from './QueryTab'
+import type { ReadReplicasData } from '@/data/read-replicas/replicas-query'
 import { explorerQueryState } from '@/state/explorer-query'
 import { createTabsState, TabsStateContext } from '@/state/tabs'
 import { customRender } from '@/tests/lib/custom-render'
@@ -12,10 +13,7 @@ import { setupSqlEditorMocks } from '@/tests/lib/sql-editor-test-utils'
 
 const testContext = vi.hoisted(() => ({
   flags: { otelLegacyLogs: true } as Record<string, boolean>,
-  replicas: {
-    data: [] as Array<{ identifier: string; connectionString: string }>,
-    isPending: false,
-  },
+  params: { ref: 'default', id: 'query-test' } as { ref?: string; id?: string },
 }))
 
 vi.mock('common', async (importOriginal) => {
@@ -23,20 +21,10 @@ vi.mock('common', async (importOriginal) => {
   return {
     ...actual,
     IS_PLATFORM: true,
-    useParams: () => ({ ref: 'default', id: 'query-test' }),
+    useParams: () => testContext.params,
     useFlag: (flag: string) => testContext.flags[flag] ?? false,
   }
 })
-
-vi.mock('@/hooks/misc/useSelectedProject', () => ({
-  useSelectedProjectQuery: () => ({
-    data: { ref: 'default', connectionString: 'postgresql://primary' },
-  }),
-}))
-
-vi.mock('@/data/read-replicas/replicas-query', () => ({
-  useReadReplicasQuery: () => testContext.replicas,
-}))
 
 vi.mock('@/components/ui/CodeEditor/CodeEditor', () => ({
   CodeEditor: ({ value }: { value: string }) => (
@@ -76,11 +64,22 @@ const createDraft = (
 beforeEach(() => {
   setupSqlEditorMocks()
   testContext.flags.otelLegacyLogs = true
-  testContext.replicas = { data: [], isPending: false }
+  testContext.params = { ref: 'default', id: 'query-test' }
   explorerQueryState.removeDraft({ id: 'query-test', projectRef: 'default' })
 })
 
+afterEach(() => explorerQueryState.flushPendingPersistence())
+
 describe('QueryTab execution', () => {
+  it('keeps loading while dynamic route parameters are unavailable', () => {
+    testContext.params = {}
+
+    renderQueryTab()
+
+    expect(screen.getByRole('status', { name: 'Loading query' })).toBeInTheDocument()
+    expect(screen.queryByText('Query draft not found')).not.toBeInTheDocument()
+  })
+
   it('records an unavailable error and skips the logs endpoint when the flag is off', async () => {
     testContext.flags.otelLegacyLogs = false
     createDraft({
@@ -99,7 +98,9 @@ describe('QueryTab execution', () => {
     })
 
     renderQueryTab()
-    await userEvent.click(await screen.findByRole('button', { name: 'Run' }))
+    const runButton = await screen.findByRole('button', { name: 'Run' })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await userEvent.click(runButton)
 
     expect(
       await screen.findByText("Error: Querying logs isn't available for this project yet.")
@@ -108,11 +109,22 @@ describe('QueryTab execution', () => {
   })
 
   it('waits for replicas, then fails closed when the selected database is absent', async () => {
-    testContext.replicas = { data: [], isPending: true }
     createDraft({
       id: 'database',
       type: 'database',
       parameters: { identifier: 'missing-replica' },
+    })
+    let releaseReplicas: () => void = () => undefined
+    const replicasPending = new Promise<void>((resolve) => {
+      releaseReplicas = resolve
+    })
+    addAPIMock({
+      method: 'get',
+      path: '/platform/projects/:ref/databases',
+      response: async () => {
+        await replicasPending
+        return HttpResponse.json<ReadReplicasData>([])
+      },
     })
     const requests: Request[] = []
     addAPIMock({
@@ -124,16 +136,13 @@ describe('QueryTab execution', () => {
       },
     })
 
-    const { rerender } = renderQueryTab()
-    expect(await screen.findByRole('button', { name: 'Run' })).toBeDisabled()
+    renderQueryTab()
+    const runButton = await screen.findByRole('button', { name: 'Run' })
+    expect(runButton).toBeDisabled()
 
-    testContext.replicas = { data: [], isPending: false }
-    rerender(
-      <TabsStateContext.Provider value={createTabsState('default')}>
-        <QueryTab />
-      </TabsStateContext.Provider>
-    )
-    await userEvent.click(await screen.findByRole('button', { name: 'Run' }))
+    act(() => releaseReplicas())
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await userEvent.click(runButton)
 
     expect(
       await screen.findByText('Error: Unable to run query: Connection string is missing')
@@ -158,7 +167,9 @@ describe('QueryTab execution', () => {
     })
 
     renderQueryTab()
-    await userEvent.click(await screen.findByRole('button', { name: 'Run' }))
+    const runButton = await screen.findByRole('button', { name: 'Run' })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await userEvent.click(runButton)
     await waitFor(() => expect(bodies).toHaveLength(1))
 
     expect(

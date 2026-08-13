@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockAnimationsApi } from 'jsdom-testing-mocks'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from 'ui'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 
 import { LogsTimeRangeSubMenu } from './LogsTimeRangeSubMenu'
 import type { LogTimeRange } from '@/data/query-sources/query-source-registry'
@@ -15,14 +15,14 @@ vi.mock('@/hooks/misc/useCheckEntitlements', () => ({
 }))
 
 const renderSubMenu = ({
-  onRangeChange = vi.fn(),
-  onOpenCustomRange = vi.fn(),
-  onShowUpgrade = vi.fn(),
+  onRangeChange = vi.fn<(range: LogTimeRange) => void>(),
+  onOpenCustomRange = vi.fn<() => void>(),
+  onShowUpgrade = vi.fn<() => void>(),
   range = { type: 'relative', amount: 1, unit: 'hour' } as LogTimeRange,
 }: {
-  onRangeChange?: ReturnType<typeof vi.fn>
-  onOpenCustomRange?: ReturnType<typeof vi.fn>
-  onShowUpgrade?: ReturnType<typeof vi.fn>
+  onRangeChange?: Mock<(range: LogTimeRange) => void>
+  onOpenCustomRange?: Mock<() => void>
+  onShowUpgrade?: Mock<() => void>
   range?: LogTimeRange
 } = {}) => {
   customRender(
