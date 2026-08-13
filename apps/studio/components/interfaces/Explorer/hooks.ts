@@ -90,7 +90,7 @@ export const useCreateQuery = () => {
   const createQuery = () => {
     if (!project) return console.error('Project is required')
 
-    const id = crypto.randomUUID()
+    const id = generateUuid()
     querySnap.createDraft({ id, projectRef: project.ref })
     tabs.addTab({
       id: createTabId('query', { id }),

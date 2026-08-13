@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { FeatureFlagContext } from 'common'
 import { mockAnimationsApi } from 'jsdom-testing-mocks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -37,6 +38,16 @@ beforeEach(() => {
 })
 
 describe('ExplorerQuerySourceMenu', () => {
+  const renderWithFlags = (
+    source: Parameters<typeof ExplorerQuerySourceMenu>[0]['source'],
+    flags: Record<string, boolean>
+  ) =>
+    customRender(
+      <FeatureFlagContext.Provider value={{ configcat: flags, posthog: {}, hasLoaded: true }}>
+        <ExplorerQuerySourceMenu source={source} onSourceChange={vi.fn()} />
+      </FeatureFlagContext.Provider>
+    )
+
   it('emits a complete default binding when the query changes source', async () => {
     const onSourceChange = vi.fn()
 
@@ -84,5 +95,32 @@ describe('ExplorerQuerySourceMenu', () => {
       type: 'logs',
       parameters: { time_range: { type: 'relative', amount: 3, unit: 'hour' } },
     })
+  })
+
+  it('does not offer logs when source flags are disabled for a database query', async () => {
+    renderWithFlags(
+      { id: 'database', type: 'database', parameters: {} },
+      { sqlEditorLogsSource: false, otelLegacyLogs: false }
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Query source: Database' }))
+
+    expect(screen.queryByText('Logs')).not.toBeInTheDocument()
+  })
+
+  it('keeps logs available when an existing query already uses it', async () => {
+    renderWithFlags(
+      {
+        id: 'logs',
+        type: 'logs',
+        parameters: { time_range: { type: 'relative', amount: 1, unit: 'hour' } },
+      },
+      { sqlEditorLogsSource: false, otelLegacyLogs: false }
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Query source: Logs' }))
+
+    expect(screen.getAllByText('Logs')).toHaveLength(2)
+    expect(screen.getByText('Database')).toBeInTheDocument()
   })
 })

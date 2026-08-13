@@ -7,7 +7,30 @@ import { useEditorType } from '../editors/EditorsLayout.hooks'
 import { buildTableEditorUrl } from '@/components/grid/SupabaseGrid.utils'
 import { EntityTypeIcon } from '@/components/ui/EntityTypeIcon'
 import { ENTITY_TYPE } from '@/data/entity-types/entity-type-constants'
-import { editorEntityTypes, useTabsStateSnapshot } from '@/state/tabs'
+import { editorEntityTypes, useTabsStateSnapshot, type RecentItem } from '@/state/tabs'
+
+const getRecentItemHref = (ref: string, item: RecentItem) => {
+  switch (item.type) {
+    case 'sql':
+      return `/project/${ref}/sql/${item.metadata?.sqlId}`
+    case 'notebook':
+      return `/project/${ref}/explorer/notebook/${item.metadata?.notebookId}`
+    case 'query':
+      return `/project/${ref}/explorer/query/${item.metadata?.queryId}`
+    case 'r':
+    case 'v':
+    case 'm':
+    case 'f':
+    case 'p':
+      return buildTableEditorUrl({
+        projectRef: ref,
+        tableId: item.metadata?.tableId!,
+        schema: item.metadata?.schema,
+      })
+    default:
+      return `/project/${ref}/explorer/${item.type}/${item.metadata?.schema}/${item.metadata?.name}`
+  }
+}
 
 export function RecentItems() {
   const { ref } = useParams()
@@ -53,21 +76,7 @@ export function RecentItems() {
                   transition={{ delay: index * 0.012, duration: 0.15 }}
                 >
                   <Link
-                    href={
-                      item.type === 'sql'
-                        ? `/project/${ref}/sql/${item.metadata?.sqlId}`
-                        : item.type === 'r' ||
-                            item.type === 'v' ||
-                            item.type === 'm' ||
-                            item.type === 'f' ||
-                            item.type === 'p'
-                          ? buildTableEditorUrl({
-                              projectRef: ref,
-                              tableId: item.metadata?.tableId!,
-                              schema: item.metadata?.schema,
-                            })
-                          : `/project/${ref}/explorer/${item.type}/${item.metadata?.schema}/${item.metadata?.name}`
-                    }
+                    href={getRecentItemHref(ref, item)}
                     className="flex items-center gap-4 rounded-lg bg-surface-100 py-2 transition-colors hover:bg-surface-200"
                   >
                     <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-surface-100 border">
