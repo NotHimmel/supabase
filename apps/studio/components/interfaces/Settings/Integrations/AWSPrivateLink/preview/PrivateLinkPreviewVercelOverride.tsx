@@ -2,42 +2,29 @@
  * Prototype-only Vercel card overrides. Not a fake Vercel dashboard.
  */
 
-import { Card, CardContent } from 'ui'
+import { Card, CardContent, Input } from 'ui'
+import { FormLayout } from 'ui-patterns/form/Layout/FormLayout'
 
 import { usePrivateLinkPreview } from './privateLinkPreview.store'
-import PartnerIcon from '@/components/ui/PartnerIcon'
-import { MANAGED_BY } from '@/lib/constants/infrastructure'
 
 export const PrivateLinkPreviewVercelOverride = () => {
   const { vercelCard } = usePrivateLinkPreview()
 
-  if (vercelCard === 'live') return null
-
-  if (vercelCard === 'not-connected') {
-    return (
-      <Card>
-        <CardContent>
-          <p className="text-sm text-foreground-lighter">Install Vercel integration</p>
-        </CardContent>
-      </Card>
-    )
-  }
+  if (vercelCard === 'live' || vercelCard === 'not-connected') return null
 
   if (vercelCard === 'marketplace') {
     return (
       <Card>
-        <CardContent className="flex items-start gap-3">
-          <PartnerIcon
-            organization={{ managed_by: MANAGED_BY.VERCEL_MARKETPLACE }}
-            showTooltip={false}
-            size="medium"
-          />
-          <div className="space-y-1">
-            <p className="text-sm text-foreground">Connected to acme-app</p>
-            <p className="text-sm text-foreground-lighter">
-              Managed via Vercel Marketplace. Billing and environment variables stay on Vercel.
-            </p>
-          </div>
+        <CardContent>
+          <FormLayout
+            layout="flex-row-reverse"
+            label="Vercel project"
+            description="Managed via Vercel Marketplace. Billing and environment variables stay on Vercel."
+          >
+            <div className="w-full md:w-64">
+              <Input readOnly value="acme-app" onFocus={(e) => e.target.blur()} />
+            </div>
+          </FormLayout>
         </CardContent>
       </Card>
     )

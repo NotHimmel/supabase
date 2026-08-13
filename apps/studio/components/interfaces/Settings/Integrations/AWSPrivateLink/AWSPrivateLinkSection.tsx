@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -14,7 +15,6 @@ import {
   CardContent,
   cn,
 } from 'ui'
-import { Admonition } from 'ui-patterns/Admonition'
 import {
   PageSection,
   PageSectionContent,
@@ -25,11 +25,10 @@ import {
 } from 'ui-patterns/PageSection'
 
 import { IntegrationSectionIcon } from '../IntegrationsSettings'
-import { getConnectionsAttention, getConnectionsAttentionCopy } from './AWSPrivateLink.utils'
 import { AWSPrivateLinkAccountItem } from './AWSPrivateLinkAccountItem'
+import { AWSPrivateLinkAttentionAdmonition } from './AWSPrivateLinkAttentionAdmonition'
 import { AWSPrivateLinkForm } from './AWSPrivateLinkForm'
 import { usePrivateLinkPreview } from './preview'
-import { InlineLink } from '@/components/ui/InlineLink'
 import { ResourceList } from '@/components/ui/Resource/ResourceList'
 import { UpgradeToPro } from '@/components/ui/UpgradeToPro'
 import { useAWSAccountDeleteMutation } from '@/data/aws-accounts/aws-account-delete-mutation'
@@ -38,7 +37,7 @@ import { useAWSAccountsQuery } from '@/data/aws-accounts/aws-accounts-query'
 import { formatDatabaseID } from '@/data/read-replicas/replicas.utils'
 import { useCheckEntitlements } from '@/hooks/misc/useCheckEntitlements'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
-import { DOCS_URL, IS_PLATFORM } from '@/lib/constants'
+import { IS_PLATFORM } from '@/lib/constants'
 
 export const AWSPrivateLinkSection = () => {
   const { data: project } = useSelectedProjectQuery()
@@ -57,13 +56,13 @@ export const AWSPrivateLinkSection = () => {
     onSuccess: () => {
       toast.success('Connection will be deleted shortly')
       setShowDeleteModal(false)
+      setShowForm(false)
       setSelectedAccount(undefined)
     },
   })
 
   const { hasAccess: hasPrivateLinkAccess } = useCheckEntitlements('security.private_link')
   const promptPlanUpgrade = IS_PLATFORM && !hasPrivateLinkAccess && !preview.skipUpgradeWall
-  const attentionCopy = getConnectionsAttentionCopy(getConnectionsAttention(accounts))
 
   const onAddAccount = () => {
     setSelectedAccount(undefined)
@@ -73,11 +72,6 @@ export const AWSPrivateLinkSection = () => {
   const onEditAccount = (account: AWSAccount) => {
     setSelectedAccount(account)
     setShowForm(true)
-  }
-
-  const onDeleteAccount = (account: AWSAccount) => {
-    setSelectedAccount(account)
-    setShowDeleteModal(true)
   }
 
   const onConfirmDelete = async () => {
@@ -118,7 +112,7 @@ export const AWSPrivateLinkSection = () => {
           <div className="space-y-6">
             {promptPlanUpgrade && (
               <UpgradeToPro
-                layout="vertical"
+                layout="responsive"
                 primaryText="Available on Team and Enterprise plans"
                 secondaryText="Upgrade to add a PrivateLink connection."
                 buttonText="Upgrade to Team"
@@ -128,40 +122,18 @@ export const AWSPrivateLinkSection = () => {
             <div className={cn(promptPlanUpgrade && 'opacity-25 pointer-events-none')}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-foreground">Connections</h3>
-                <Button variant="default" onClick={onAddAccount}>
+                <Button variant="default" icon={<Plus />} onClick={onAddAccount}>
                   Add connection
                 </Button>
               </div>
-              {attentionCopy && (
-                <div className="mb-3">
-                  <Admonition
-                    type={attentionCopy.type}
-                    title={attentionCopy.title}
-                    description={
-                      attentionCopy.showAcceptLink ? (
-                        <>
-                          {attentionCopy.description}{' '}
-                          <InlineLink
-                            href={`${DOCS_URL}/guides/platform/privatelink#step-2-accept-resource-share`}
-                          >
-                            How to accept
-                          </InlineLink>
-                        </>
-                      ) : (
-                        attentionCopy.description
-                      )
-                    }
-                  />
-                </div>
-              )}
+              <AWSPrivateLinkAttentionAdmonition accounts={accounts} className="mb-3" />
               {(accounts?.length ?? 0) > 0 ? (
                 <ResourceList>
                   {accounts?.map((account) => (
                     <AWSPrivateLinkAccountItem
                       key={`${account.aws_account_id}-${account.database_identifier ?? 'primary'}`}
-                      {...account}
-                      onEdit={() => onEditAccount(account)}
-                      onDelete={() => onDeleteAccount(account)}
+                      account={account}
+                      onView={() => onEditAccount(account)}
                     />
                   ))}
                 </ResourceList>
@@ -177,7 +149,12 @@ export const AWSPrivateLinkSection = () => {
         </PageSectionContent>
       </PageSection>
 
-      <AWSPrivateLinkForm account={selectedAccount} open={showForm} onOpenChange={setShowForm} />
+      <AWSPrivateLinkForm
+        account={selectedAccount}
+        open={showForm}
+        onOpenChange={setShowForm}
+        onDelete={() => setShowDeleteModal(true)}
+      />
 
       <AlertDialog
         open={showDeleteModal}

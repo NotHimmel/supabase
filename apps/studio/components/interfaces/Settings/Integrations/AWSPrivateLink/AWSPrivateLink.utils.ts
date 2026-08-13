@@ -5,54 +5,38 @@ export type PrivateLinkConnectionStatus = AWSAccount['status']
 type BadgeVariant = 'success' | 'warning' | 'destructive' | 'default'
 
 export type ConnectionStatusUi = {
-  title: string
-  description: string
   badge: string
   badgeVariant: BadgeVariant
 }
 
 const CONNECTION_STATUS_UI: Record<PrivateLinkConnectionStatus, ConnectionStatusUi> = {
   ASSOCIATION_ACCEPTED: {
-    title: 'This connection is active',
-    description: 'The AWS account owner has accepted the resource share.',
     badge: 'Connected',
     badgeVariant: 'success',
   },
   READY: {
-    title: 'Waiting for the AWS account owner to accept',
-    description: 'This request expires after 12 hours.',
     badge: 'Waiting',
     badgeVariant: 'warning',
   },
   CREATING: {
-    title: 'This connection is being created',
-    description: '',
     badge: 'Creating',
     badgeVariant: 'default',
   },
   DELETING: {
-    title: 'This connection is being deleted',
-    description: '',
     badge: 'Deleting',
     badgeVariant: 'warning',
   },
   ASSOCIATION_REQUEST_EXPIRED: {
-    title: 'This request has expired',
-    description: 'Add a new connection to try again.',
     badge: 'Expired',
     badgeVariant: 'destructive',
   },
   CREATION_FAILED: {
-    title: "Couldn't create this connection",
-    description: 'Add a new connection to try again.',
     badge: 'Failed',
     badgeVariant: 'destructive',
   },
 }
 
 const UNKNOWN_STATUS_UI: ConnectionStatusUi = {
-  title: "Couldn't determine this connection's status",
-  description: '',
   badge: 'Unknown',
   badgeVariant: 'default',
 }
@@ -60,6 +44,15 @@ const UNKNOWN_STATUS_UI: ConnectionStatusUi = {
 export function getConnectionStatusUi(status?: PrivateLinkConnectionStatus): ConnectionStatusUi {
   if (!status) return UNKNOWN_STATUS_UI
   return CONNECTION_STATUS_UI[status] ?? UNKNOWN_STATUS_UI
+}
+
+export function getConnectionTitle(
+  account: Pick<AWSAccount, 'account_name' | 'aws_account_id' | 'partner'>
+): string {
+  const nickname = account.account_name?.trim()
+  if (nickname) return nickname
+  if (account.partner === 'vercel') return 'Vercel'
+  return account.aws_account_id
 }
 
 const IAM_ROLE_ARN_PATTERN = /^arn:aws:iam::\d{12}:role\/.+/

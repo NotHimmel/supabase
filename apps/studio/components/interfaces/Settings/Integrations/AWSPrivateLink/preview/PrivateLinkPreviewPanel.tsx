@@ -33,7 +33,7 @@ export function replayPrivateLinkAddedToast() {
   toast.success('Connection added', {
     description: 'Accept the resource share in AWS within 12 hours.',
     action: {
-      label: 'How to accept',
+      label: 'View instructions',
       onClick: () => {
         window.open(ACCEPT_DOCS_HREF, '_blank', 'noopener,noreferrer')
       },

@@ -4,73 +4,47 @@ import {
   getConnectionsAttention,
   getConnectionsAttentionCopy,
   getConnectionStatusUi,
+  getConnectionTitle,
   isIamRoleArn,
   type PrivateLinkConnectionStatus,
 } from './AWSPrivateLink.utils'
 
 describe('getConnectionStatusUi', () => {
   it.each([
-    [
-      'ASSOCIATION_ACCEPTED',
-      {
-        badge: 'Connected',
-        badgeVariant: 'success',
-        title: 'This connection is active',
-      },
-    ],
-    [
-      'READY',
-      {
-        badge: 'Waiting',
-        badgeVariant: 'warning',
-        title: 'Waiting for the AWS account owner to accept',
-        description: 'This request expires after 12 hours.',
-      },
-    ],
-    [
-      'CREATING',
-      {
-        badge: 'Creating',
-        badgeVariant: 'default',
-        title: 'This connection is being created',
-      },
-    ],
-    [
-      'DELETING',
-      {
-        badge: 'Deleting',
-        badgeVariant: 'warning',
-        title: 'This connection is being deleted',
-      },
-    ],
-    [
-      'ASSOCIATION_REQUEST_EXPIRED',
-      {
-        badge: 'Expired',
-        badgeVariant: 'destructive',
-        title: 'This request has expired',
-      },
-    ],
-    [
-      'CREATION_FAILED',
-      {
-        badge: 'Failed',
-        badgeVariant: 'destructive',
-        title: "Couldn't create this connection",
-      },
-    ],
+    ['ASSOCIATION_ACCEPTED', { badge: 'Connected', badgeVariant: 'success' }],
+    ['READY', { badge: 'Waiting', badgeVariant: 'warning' }],
+    ['CREATING', { badge: 'Creating', badgeVariant: 'default' }],
+    ['DELETING', { badge: 'Deleting', badgeVariant: 'warning' }],
+    ['ASSOCIATION_REQUEST_EXPIRED', { badge: 'Expired', badgeVariant: 'destructive' }],
+    ['CREATION_FAILED', { badge: 'Failed', badgeVariant: 'destructive' }],
   ] as const satisfies ReadonlyArray<
-    [PrivateLinkConnectionStatus, Partial<ReturnType<typeof getConnectionStatusUi>>]
+    [PrivateLinkConnectionStatus, ReturnType<typeof getConnectionStatusUi>]
   >)('maps %s', (status, expected) => {
-    expect(getConnectionStatusUi(status)).toMatchObject(expected)
+    expect(getConnectionStatusUi(status)).toEqual(expected)
   })
 
   it('returns unknown copy when status is missing', () => {
-    const ui = getConnectionStatusUi()
+    expect(getConnectionStatusUi()).toEqual({ badge: 'Unknown', badgeVariant: 'default' })
+  })
+})
 
-    expect(ui.badge).toBe('Unknown')
-    expect(ui.badgeVariant).toBe('default')
-    expect(ui.title).toBe("Couldn't determine this connection's status")
+describe('getConnectionTitle', () => {
+  it('uses the customer nickname when present', () => {
+    expect(
+      getConnectionTitle({
+        account_name: 'Production VPC',
+        aws_account_id: '123456789012',
+        partner: 'vercel',
+      })
+    ).toBe('Production VPC')
+  })
+
+  it('falls back to Vercel when that partner has no nickname', () => {
+    expect(getConnectionTitle({ aws_account_id: '111122223333', partner: 'vercel' })).toBe('Vercel')
+  })
+
+  it('falls back to the AWS account ID for an unnamed AWS-direct connection', () => {
+    expect(getConnectionTitle({ aws_account_id: '123456789012' })).toBe('123456789012')
   })
 })
 

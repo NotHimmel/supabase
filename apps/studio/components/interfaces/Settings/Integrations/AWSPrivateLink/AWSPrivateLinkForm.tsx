@@ -1,10 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useFlag } from 'common'
-import { ExternalLink } from 'lucide-react'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import {
-  Badge,
   Button,
   Form,
   FormControl,
@@ -23,12 +20,12 @@ import {
   SheetSection,
   SheetTitle,
 } from 'ui'
-import { Admonition } from 'ui-patterns/Admonition'
 import { Input as CopyableInput } from 'ui-patterns/DataInputs/Input'
 import { FormItemLayout } from 'ui-patterns/form/FormItemLayout/FormItemLayout'
 import { z } from 'zod'
 
-import { getConnectionStatusUi, isIamRoleArn } from './AWSPrivateLink.utils'
+import { isIamRoleArn } from './AWSPrivateLink.utils'
+import { AWSPrivateLinkAttentionAdmonition } from './AWSPrivateLinkAttentionAdmonition'
 import { replayPrivateLinkAddedToast, usePrivateLinkPreview } from './preview'
 import { InlineLink } from '@/components/ui/InlineLink'
 import { useAWSAccountCreateMutation } from '@/data/aws-accounts/aws-account-create-mutation'
@@ -59,9 +56,15 @@ interface AWSPrivateLinkFormProps {
   account?: AWSAccount
   open: boolean
   onOpenChange: (open: boolean) => void
+  onDelete?: () => void
 }
 
-export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLinkFormProps) => {
+export const AWSPrivateLinkForm = ({
+  account,
+  open,
+  onOpenChange,
+  onDelete,
+}: AWSPrivateLinkFormProps) => {
   const isNew = !account
   const { data: project } = useSelectedProjectQuery()
   const showPrivateLinkReadReplica = useFlag('privatelinkReadReplica')
@@ -77,7 +80,6 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
 
   const readReplicas = databases.filter((database) => database.identifier !== project?.ref)
   const showDatabaseTarget = showPrivateLinkReadReplica || !isNew
-  const statusUi = getConnectionStatusUi(account?.status)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -151,36 +153,7 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
             className="flex flex-col flex-1 min-h-0"
           >
             <SheetSection className="space-y-4 flex-1 overflow-y-auto">
-              {!isNew && account && (
-                <Admonition
-                  showIcon={false}
-                  type="default"
-                  childProps={{ title: { className: 'flex-row gap-x-2 items-center' } }}
-                  // @ts-ignore
-                  title={
-                    <>
-                      <span>{statusUi.title}</span>
-                      <Badge className="ml-2" variant={statusUi.badgeVariant}>
-                        {statusUi.badge}
-                      </Badge>
-                    </>
-                  }
-                  description={statusUi.description}
-                  actions={
-                    account.status === 'READY' && (
-                      <Button variant="default" className="w-min" icon={<ExternalLink />}>
-                        <Link
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          href={`${DOCS_URL}/guides/platform/privatelink#step-2-accept-resource-share`}
-                        >
-                          How to accept
-                        </Link>
-                      </Button>
-                    )
-                  }
-                />
-              )}
+              {!isNew && account && <AWSPrivateLinkAttentionAdmonition accounts={[account]} />}
               <FormField
                 control={form.control}
                 name="awsAccountId"
@@ -207,6 +180,31 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                   </FormItemLayout>
                 )}
               />
+              {isNew && (
+                <FormField
+                  control={form.control}
+                  name="destinationIamRoleArn"
+                  render={({ field }) => (
+                    <FormItemLayout
+                      label="Destination IAM role ARN"
+                      labelOptional="Optional"
+                      description="Restricts the share to a single role. Leave empty to share with the whole AWS account."
+                    >
+                      <FormControl>
+                        <Input {...field} placeholder="arn:aws:iam::123456789012:role/Connector" />
+                      </FormControl>
+                    </FormItemLayout>
+                  )}
+                />
+              )}
+              {!isNew && account?.destination_iam_role_arn && (
+                <FormItemLayout
+                  label="Destination IAM role ARN"
+                  description="This share is restricted to this role."
+                >
+                  <CopyableInput readOnly copy value={account.destination_iam_role_arn} />
+                </FormItemLayout>
+              )}
               {showDatabaseTarget && (
                 <FormField
                   control={form.control}
@@ -251,7 +249,11 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                 control={form.control}
                 name="accountName"
                 render={({ field }) => (
-                  <FormItemLayout label="Description" labelOptional="Optional">
+                  <FormItemLayout
+                    label="Name"
+                    labelOptional="Optional"
+                    description="Shown in the connections list."
+                  >
                     <FormControl>
                       <Input
                         {...field}
@@ -264,31 +266,6 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                   </FormItemLayout>
                 )}
               />
-              {isNew && (
-                <FormField
-                  control={form.control}
-                  name="destinationIamRoleArn"
-                  render={({ field }) => (
-                    <FormItemLayout
-                      label="Destination IAM role ARN"
-                      labelOptional="Optional"
-                      description="Restricts the share to a single role. Leave empty to share with the whole AWS account."
-                    >
-                      <FormControl>
-                        <Input {...field} placeholder="arn:aws:iam::123456789012:role/Connector" />
-                      </FormControl>
-                    </FormItemLayout>
-                  )}
-                />
-              )}
-              {!isNew && account?.destination_iam_role_arn && (
-                <FormItemLayout
-                  label="Destination IAM role ARN"
-                  description="This share is restricted to this role."
-                >
-                  <CopyableInput readOnly copy value={account.destination_iam_role_arn} />
-                </FormItemLayout>
-              )}
               {!isNew && account?.resource_access_manager_resource_config_id && (
                 <FormItemLayout label="Resource configuration ID">
                   <CopyableInput
@@ -314,19 +291,30 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
               )}
             </SheetSection>
 
-            <SheetFooter>
-              <Button
-                type="button"
-                variant="default"
-                disabled={isPending}
-                onClick={() => handleOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              {isNew && (
-                <Button form={FORM_ID} type="submit" loading={isPending}>
-                  Add connection
-                </Button>
+            <SheetFooter className={!isNew ? 'sm:justify-between' : undefined}>
+              {!isNew ? (
+                <>
+                  <Button type="button" variant="danger" onClick={onDelete}>
+                    Delete
+                  </Button>
+                  <Button type="button" variant="default" onClick={() => handleOpenChange(false)}>
+                    Close
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="default"
+                    disabled={isPending}
+                    onClick={() => handleOpenChange(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button form={FORM_ID} type="submit" loading={isPending}>
+                    Add connection
+                  </Button>
+                </>
               )}
             </SheetFooter>
           </form>
