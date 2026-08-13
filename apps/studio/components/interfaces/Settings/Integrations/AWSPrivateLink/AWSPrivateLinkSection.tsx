@@ -103,7 +103,7 @@ export const AWSPrivateLinkSection = () => {
             <PageSectionSummary>
               <PageSectionTitle>AWS PrivateLink</PageSectionTitle>
               <PageSectionDescription>
-                Connect to this project from your AWS VPC without using the public internet.
+                Private connectivity from a connected AWS VPC, without the public internet.
               </PageSectionDescription>
             </PageSectionSummary>
           </div>

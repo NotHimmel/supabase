@@ -2,57 +2,67 @@
  * Prototype-only Vercel card overrides. Not a fake Vercel dashboard.
  */
 
-import { Card, CardContent, Input } from 'ui'
+import SVG from 'react-inlinesvg'
+import { Card, CardContent, CardFooter, Input } from 'ui'
 import { FormLayout } from 'ui-patterns/form/Layout/FormLayout'
 
 import { usePrivateLinkPreview } from './privateLinkPreview.store'
+import { BASE_PATH } from '@/lib/constants'
+
+function VercelProjectField() {
+  return (
+    <FormLayout
+      layout="flex-row-reverse"
+      label="Vercel project"
+      description="Managed via Vercel Marketplace."
+    >
+      <div className="relative w-full md:w-64">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+          <SVG
+            src={`${BASE_PATH}/img/icons/vercel-icon.svg`}
+            title="Vercel icon"
+            className="w-3.5 shrink-0 text-foreground-muted"
+          />
+        </span>
+        <Input readOnly value="acme-app" className="pl-9" onFocus={(e) => e.target.blur()} />
+      </div>
+    </FormLayout>
+  )
+}
+
+function MarketplaceVercelCard() {
+  return (
+    <Card>
+      <CardContent>
+        <VercelProjectField />
+      </CardContent>
+    </Card>
+  )
+}
+
+function MarketplacePlusVercelCard() {
+  return (
+    <Card>
+      <CardContent>
+        <VercelProjectField />
+      </CardContent>
+      <CardFooter>
+        <p className="text-sm text-foreground-lighter">
+          Private database path is in AWS PrivateLink below.
+        </p>
+      </CardFooter>
+    </Card>
+  )
+}
 
 export const PrivateLinkPreviewVercelOverride = () => {
   const { vercelCard } = usePrivateLinkPreview()
 
-  if (vercelCard === 'live' || vercelCard === 'not-connected') return null
+  if (vercelCard === 'marketplace') return <MarketplaceVercelCard />
 
-  if (vercelCard === 'marketplace') {
-    return (
-      <Card>
-        <CardContent>
-          <FormLayout
-            layout="flex-row-reverse"
-            label="Vercel project"
-            description="Managed via Vercel Marketplace. Billing and environment variables stay on Vercel."
-          >
-            <div className="w-full md:w-64">
-              <Input readOnly value="acme-app" onFocus={(e) => e.target.blur()} />
-            </div>
-          </FormLayout>
-        </CardContent>
-      </Card>
-    )
+  if (vercelCard === 'marketplace-plus' || vercelCard === 'distinguish-billing') {
+    return <MarketplacePlusVercelCard />
   }
 
-  if (vercelCard === 'initiated') {
-    return (
-      <Card>
-        <CardContent className="space-y-1">
-          <p className="text-sm text-foreground">Linked from Vercel</p>
-          <p className="text-sm text-foreground-lighter">
-            Billing and environment variables stay on Vercel. The private database path is in AWS
-            PrivateLink below.
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card>
-      <CardContent className="space-y-1">
-        <p className="text-sm text-foreground">Linked from Vercel</p>
-        <p className="text-sm text-foreground-lighter">
-          Marketplace manages billing. AWS PrivateLink below is the private database path. These are
-          not the same connection.
-        </p>
-      </CardContent>
-    </Card>
-  )
+  return null
 }

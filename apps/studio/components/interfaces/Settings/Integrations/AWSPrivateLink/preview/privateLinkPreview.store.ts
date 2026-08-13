@@ -5,8 +5,10 @@
 import { proxy, useSnapshot } from 'valtio'
 
 import {
+  getPreviewNavManagedBy,
   getPrivateLinkPreviewScenarioConfig,
   isPrivateLinkPreviewScenario,
+  isVercelMarketplacePreviewCard,
   PRIVATE_LINK_PREVIEW_QUERY,
   PRIVATE_LINK_PREVIEW_SCENARIO_QUERY,
   PRIVATE_LINK_PREVIEW_SCENARIO_STORAGE_KEY,
@@ -15,8 +17,9 @@ import {
 } from './privateLinkPreview.constants'
 import { getPreviewAccounts } from './privateLinkPreview.mocks'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
+import type { ManagedBy } from '@/lib/constants/infrastructure'
 
-const DEFAULT_SCENARIO: PrivateLinkPreviewScenario = 'aws-direct-connected'
+const DEFAULT_SCENARIO: PrivateLinkPreviewScenario = 'empty'
 
 function readSession(key: string) {
   if (typeof window === 'undefined') return null
@@ -98,5 +101,11 @@ export function usePrivateLinkPreview() {
     prefillAwsAccountId: isActive ? config.prefillAwsAccountId : undefined,
     skipUpgradeWall: isActive,
     b5Note: isActive ? config.b5Note : undefined,
+    showVercelMarketplaceNav: isActive && isVercelMarketplacePreviewCard(config.vercelCard),
   }
+}
+
+export function usePreviewNavManagedBy(managedBy: ManagedBy | undefined): ManagedBy | undefined {
+  const { showVercelMarketplaceNav } = usePrivateLinkPreview()
+  return getPreviewNavManagedBy(managedBy, showVercelMarketplaceNav)
 }

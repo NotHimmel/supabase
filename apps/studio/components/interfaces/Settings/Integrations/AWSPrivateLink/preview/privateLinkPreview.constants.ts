@@ -3,6 +3,8 @@
  * Enable with `?privatelinkPreview=1`. Off by default. Do not ship.
  */
 
+import { MANAGED_BY, type ManagedBy } from '@/lib/constants/infrastructure'
+
 export const PRIVATE_LINK_PREVIEW_QUERY = 'privatelinkPreview'
 export const PRIVATE_LINK_PREVIEW_SCENARIO_QUERY = 'privatelinkPreviewScenario'
 export const PRIVATE_LINK_PREVIEW_STORAGE_KEY = 'supabase.privatelink-preview'
@@ -13,6 +15,7 @@ export const AWS_DIRECT_PREVIEW_ACCOUNT_ID = '123456789012'
 export const PRIVATE_LINK_PREVIEW_HOSTNAME = 'db.privatelink.supabase.com'
 
 export type PrivateLinkPreviewScenario =
+  | 'empty'
   | 'aws-direct-connected'
   | 'aws-direct-waiting'
   | 'aws-direct-expired'
@@ -31,7 +34,7 @@ export type PrivateLinkPreviewVercelCard =
   | 'live'
   | 'not-connected'
   | 'marketplace'
-  | 'initiated'
+  | 'marketplace-plus'
   | 'distinguish-billing'
 
 export type PrivateLinkPreviewScenarioConfig = {
@@ -47,6 +50,16 @@ export type PrivateLinkPreviewScenarioConfig = {
 }
 
 export const PRIVATE_LINK_PREVIEW_SCENARIOS: PrivateLinkPreviewScenarioConfig[] = [
+  {
+    id: 'empty',
+    label: 'Empty (reset)',
+    source: 'real-api',
+    description:
+      'Honest empty PrivateLink list. Vercel section is live. No mocked rows, hostname, or prefill.',
+    vercelCard: 'live',
+    showPrivateHostname: false,
+    showRestrictPublicAccess: false,
+  },
   {
     id: 'aws-direct-connected',
     label: 'AWS-direct, connected',
@@ -87,8 +100,8 @@ export const PRIVATE_LINK_PREVIEW_SCENARIOS: PrivateLinkPreviewScenarioConfig[] 
     id: 'vercel-initiated',
     label: 'Vercel-initiated, no Studio install',
     source: 'mocked-platform',
-    description: 'Must not say Install Vercel integration. Partner cue on the PrivateLink row.',
-    vercelCard: 'initiated',
+    description: 'Vercel-created PrivateLink row. Install remains available for env sync.',
+    vercelCard: 'not-connected',
     showPrivateHostname: false,
     showRestrictPublicAccess: false,
   },
@@ -106,7 +119,7 @@ export const PRIVATE_LINK_PREVIEW_SCENARIOS: PrivateLinkPreviewScenarioConfig[] 
     label: 'Marketplace plus PrivateLink',
     source: 'mocked-platform',
     description: 'Two cards, two jobs. Partner cue on the PrivateLink row.',
-    vercelCard: 'marketplace',
+    vercelCard: 'marketplace-plus',
     showPrivateHostname: false,
     showRestrictPublicAccess: false,
   },
@@ -124,8 +137,8 @@ export const PRIVATE_LINK_PREVIEW_SCENARIOS: PrivateLinkPreviewScenarioConfig[] 
     id: 'mixed-rows',
     label: 'Mixed rows',
     source: 'mocked-platform',
-    description: 'Vercel cue and AWS-direct in one list. Not a split.',
-    vercelCard: 'initiated',
+    description: 'Vercel cue and AWS-direct in one list. Install remains available. Not a split.',
+    vercelCard: 'not-connected',
     showPrivateHostname: false,
     showRestrictPublicAccess: false,
   },
@@ -134,7 +147,7 @@ export const PRIVATE_LINK_PREVIEW_SCENARIOS: PrivateLinkPreviewScenarioConfig[] 
     label: 'B6: private hostname and restrict public access',
     source: 'mocked-platform',
     description: 'Open Connect and Database Settings → Network restrictions.',
-    vercelCard: 'initiated',
+    vercelCard: 'not-connected',
     showPrivateHostname: true,
     showRestrictPublicAccess: true,
   },
@@ -161,4 +174,20 @@ export function getPrivateLinkPreviewScenarioConfig(
 ): PrivateLinkPreviewScenarioConfig {
   const config = PRIVATE_LINK_PREVIEW_SCENARIOS.find((scenario) => scenario.id === id)
   return config ?? PRIVATE_LINK_PREVIEW_SCENARIOS[0]
+}
+
+export function isVercelMarketplacePreviewCard(vercelCard: PrivateLinkPreviewVercelCard): boolean {
+  return (
+    vercelCard === 'marketplace' ||
+    vercelCard === 'marketplace-plus' ||
+    vercelCard === 'distinguish-billing'
+  )
+}
+
+export function getPreviewNavManagedBy(
+  managedBy: ManagedBy | undefined,
+  showVercelMarketplaceNav: boolean
+): ManagedBy | undefined {
+  if (showVercelMarketplaceNav) return MANAGED_BY.VERCEL_MARKETPLACE
+  return managedBy
 }

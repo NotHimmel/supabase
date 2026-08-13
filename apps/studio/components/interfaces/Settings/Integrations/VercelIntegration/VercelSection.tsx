@@ -143,13 +143,10 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
     connections.length,
     'connection'
   )} `
-  const description = isProjectScoped
-    ? 'Sync environment variables with connected Vercel projects.'
-    : 'Connect Vercel teams and sync environment variables across projects.'
   const vercelCard = preview.vercelCard
   const showPreviewCard =
     vercelCard === 'marketplace' ||
-    vercelCard === 'initiated' ||
+    vercelCard === 'marketplace-plus' ||
     vercelCard === 'distinguish-billing'
   const showLive = vercelCard === 'live'
   const showInstallEmpty =
@@ -163,7 +160,9 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
           <IntegrationSectionIcon title="vercel" />
           <PageSectionSummary>
             <PageSectionTitle>Vercel</PageSectionTitle>
-            <PageSectionDescription>{description}</PageSectionDescription>
+            <PageSectionDescription>
+              Sync environment variables with connected Vercel projects.
+            </PageSectionDescription>
           </PageSectionSummary>
         </div>
       </PageSectionMeta>

@@ -25,20 +25,9 @@ import {
   type PrivateLinkPreviewScenario,
 } from './privateLinkPreview.constants'
 import { privateLinkPreviewState, usePrivateLinkPreview } from './privateLinkPreview.store'
-import { DOCS_URL } from '@/lib/constants'
-
-const ACCEPT_DOCS_HREF = `${DOCS_URL}/guides/platform/privatelink#step-2-accept-resource-share`
 
 export function replayPrivateLinkAddedToast() {
-  toast.success('Connection added', {
-    description: 'Accept the resource share in AWS within 12 hours.',
-    action: {
-      label: 'View instructions',
-      onClick: () => {
-        window.open(ACCEPT_DOCS_HREF, '_blank', 'noopener,noreferrer')
-      },
-    },
-  })
+  toast.success('Connection added')
 }
 
 export const PrivateLinkPreviewPanel = () => {

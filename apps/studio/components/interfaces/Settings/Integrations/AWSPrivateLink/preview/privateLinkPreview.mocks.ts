@@ -78,6 +78,7 @@ export function getPreviewAccounts(
     case 'b6-private-hostname':
     case 'b5-studio-copy':
       return [vercelConnected]
+    case 'empty':
     case 'marketplace':
     case 'vercel-fallback':
       return []

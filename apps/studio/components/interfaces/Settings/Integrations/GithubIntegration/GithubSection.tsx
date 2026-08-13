@@ -102,8 +102,8 @@ export const GitHubSection = ({ isProjectScoped }: { isProjectScoped: boolean })
   })
 
   const description = isProjectScoped
-    ? 'Connect this project to a GitHub repository for production deploys and preview branches.'
-    : 'Connect GitHub repositories to projects in this organization.'
+    ? 'Preview branches and production deploys from a connected GitHub repository.'
+    : 'Preview branches and production deploys from connected GitHub repositories.'
 
   const onDeleteGitHubConnection = useCallback(
     async (connection: IntegrationProjectConnection) => {
@@ -198,7 +198,7 @@ function GitHubOrgEmptyState({ disabled, onClick }: { disabled: boolean; onClick
         <FormLayout
           layout="flex-row-reverse"
           label="GitHub repository"
-          description="Connect a repository to a project in this organization"
+          description="Add a connection to link a repository to a project"
         >
           {disabled ? (
             <ButtonTooltip
