@@ -25,6 +25,12 @@ describe('getPreviewAccounts', () => {
     expect(accounts.some((account) => account.partner === undefined)).toBe(true)
   })
 
+  it('omits a nickname on Vercel-initiated rows', () => {
+    const [account] = getPreviewAccounts('vercel-initiated', 'abc')
+    expect(account?.partner).toBe('vercel')
+    expect(account?.account_name).toBeUndefined()
+  })
+
   it('leaves marketplace without PrivateLink rows', () => {
     expect(getPreviewAccounts('marketplace')).toEqual([])
   })

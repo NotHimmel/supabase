@@ -187,7 +187,11 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                 render={({ field }) => (
                   <FormItemLayout
                     label="AWS account ID"
-                    description="12-digit ID of the destination account."
+                    description={
+                      !isNew && account?.partner === 'vercel'
+                        ? 'Connected via Vercel'
+                        : '12-digit ID of the destination account.'
+                    }
                   >
                     <FormControl>
                       <Input
@@ -276,9 +280,6 @@ export const AWSPrivateLinkForm = ({ account, open, onOpenChange }: AWSPrivateLi
                     </FormItemLayout>
                   )}
                 />
-              )}
-              {!isNew && account?.partner === 'vercel' && (
-                <p className="text-sm text-foreground-light">Connected via Vercel</p>
               )}
               {!isNew && account?.destination_iam_role_arn && (
                 <FormItemLayout

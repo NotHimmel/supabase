@@ -57,7 +57,7 @@ export function getPreviewAccounts(
   })
   const vercelConnected = account({
     status: 'ASSOCIATION_ACCEPTED',
-    account_name: 'Vercel',
+    account_name: undefined,
     aws_account_id: VERCEL_PREVIEW_AWS_ACCOUNT_ID,
     partner: 'vercel',
     destination_iam_role_arn: VERCEL_IAM_ROLE_ARN,

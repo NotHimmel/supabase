@@ -140,17 +140,10 @@ export const VercelSection = ({ isProjectScoped }: { isProjectScoped: boolean })
     connections.length,
     'connection'
   )} `
-  const liveDescription = isProjectScoped
+  const description = isProjectScoped
     ? 'Connect Vercel projects to this Supabase project. Supabase keeps environment variables up to date in each connected Vercel project.'
     : 'Connect your Vercel teams to this Supabase organization. Supabase keeps environment variables up to date in each connected project. You can also link multiple Vercel projects to the same Supabase project.'
   const showPreviewCard = preview.vercelCard !== 'live'
-
-  let description = liveDescription
-  if (preview.vercelCard === 'initiated' || preview.vercelCard === 'distinguish-billing') {
-    description = 'This project is linked from Vercel.'
-  } else if (preview.vercelCard === 'marketplace') {
-    description = 'Supabase keeps environment variables up to date. Billing stays on Vercel.'
-  }
 
   return (
     <PageSection>

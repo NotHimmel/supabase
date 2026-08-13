@@ -14,10 +14,8 @@ import {
 } from 'ui'
 
 import { getConnectionStatusUi } from './AWSPrivateLink.utils'
-import { InlineLink } from '@/components/ui/InlineLink'
 import PartnerIcon from '@/components/ui/PartnerIcon'
 import { formatDatabaseID } from '@/data/read-replicas/replicas.utils'
-import { DOCS_URL } from '@/lib/constants'
 import { MANAGED_BY } from '@/lib/constants/infrastructure'
 
 interface AWSPrivateLinkAccountItemProps {
@@ -59,37 +57,28 @@ export const AWSPrivateLinkAccountItem = ({
       ? `Read replica (ID: ${database_identifier ? formatDatabaseID(database_identifier) : 'Unknown identifier'})`
       : 'Primary database'
   const statusUi = getConnectionStatusUi(status)
+  const vercelCue = partner === 'vercel' && (
+    <PartnerIcon
+      organization={{ managed_by: MANAGED_BY.VERCEL_MARKETPLACE }}
+      tooltipText="Connected via Vercel"
+      size="small"
+    />
+  )
 
   return (
     <CardContent className="flex items-center justify-between text-sm gap-4">
       <div className="flex-1">
-        {(account_name || partner === 'vercel') && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {account_name && <div className="font-medium text-foreground">{account_name}</div>}
-            {partner === 'vercel' && (
-              <span className="inline-flex items-center gap-1 text-xs text-foreground-light">
-                <PartnerIcon
-                  organization={{ managed_by: MANAGED_BY.VERCEL_MARKETPLACE }}
-                  tooltipText="Connected via Vercel"
-                  size="small"
-                />
-                Connected via Vercel
-              </span>
-            )}
+        {account_name && (
+          <div className="flex items-center gap-2">
+            {vercelCue}
+            <div className="font-medium text-foreground">{account_name}</div>
           </div>
         )}
         <div className="text-xs text-foreground-lighter">Database: {databaseTarget}</div>
-        <div className="text-xs text-foreground-lighter">Destination account: {aws_account_id}</div>
-        {status === 'READY' && (
-          <div className="text-xs text-foreground-lighter">
-            Accept the resource share in AWS within 12 hours.{' '}
-            <InlineLink
-              href={`${DOCS_URL}/guides/platform/privatelink#step-2-accept-resource-share`}
-            >
-              How to accept
-            </InlineLink>
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 text-xs text-foreground-lighter">
+          {!account_name && vercelCue}
+          <span>Destination account: {aws_account_id}</span>
+        </div>
         {resource_access_manager_resource_config_id && (
           <div className="flex items-center gap-x-1 text-xs text-foreground-lighter">
             <span>Resource configuration:</span>

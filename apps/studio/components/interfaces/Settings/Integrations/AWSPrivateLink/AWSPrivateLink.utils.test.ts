@@ -95,12 +95,14 @@ describe('getConnectionsAttentionCopy', () => {
     const copy = getConnectionsAttentionCopy({ waitingCount: 1, expiredCount: 0 })
     expect(copy?.type).toBe('warning')
     expect(copy?.title).toBe('Waiting for the AWS account owner')
+    expect(copy?.showAcceptLink).toBe(true)
   })
 
   it('uses destructive copy when only expired', () => {
     const copy = getConnectionsAttentionCopy({ waitingCount: 0, expiredCount: 2 })
     expect(copy?.type).toBe('destructive')
     expect(copy?.title).toBe('Connection requests expired')
+    expect(copy?.showAcceptLink).toBe(false)
   })
 
   it('counts statuses from a list', () => {
